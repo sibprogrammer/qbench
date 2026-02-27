@@ -2,7 +2,6 @@ package main
 
 import (
 	"database/sql"
-	"flag"
 	"fmt"
 	"log"
 	"math"
@@ -12,21 +11,22 @@ import (
 	"time"
 
 	_ "github.com/go-sql-driver/mysql"
+	"github.com/spf13/pflag"
 )
 
 func main() {
-	host := flag.String("host", "127.0.0.1", "MySQL host")
-	port := flag.Int("port", 3306, "MySQL port")
-	user := flag.String("user", "root", "MySQL user")
-	pass := flag.String("pass", "", "MySQL password")
-	dbname := flag.String("db", "", "Database name")
-	query := flag.String("q", "SELECT 1", "SQL query")
-	totalRequests := flag.Int("n", 1000, "Total number of requests")
-	concurrency := flag.Int("c", 1, "Concurrency level")
-	flag.Parse()
+	host := pflag.StringP("host", "h", "127.0.0.1", "MySQL host")
+	port := pflag.IntP("port", "P", 3306, "MySQL port")
+	user := pflag.StringP("user", "u", "root", "MySQL user")
+	pass := pflag.StringP("password", "p", "", "MySQL password")
+	dbname := pflag.StringP("database", "d", "", "Database name")
+	query := pflag.StringP("execute", "e", "SELECT 1", "SQL query")
+	totalRequests := pflag.IntP("requests", "n", 1000, "Total number of requests")
+	concurrency := pflag.IntP("concurrency", "c", 1, "Concurrency level")
+	pflag.Parse()
 
 	if *dbname == "" {
-		log.Fatal("Database name required (-db)")
+		log.Fatal("Database name required (-d)")
 	}
 
 	if *totalRequests <= 0 {

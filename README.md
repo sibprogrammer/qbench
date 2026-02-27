@@ -7,7 +7,7 @@ A small portable utility to benchmark the performance of SQL queries. Like `ab` 
 Perform 1000 iterations of the query and print the results:
 
 ```
-qbench -c 1000 -db testdb -q "SELECT * FROM users"
+qbench -c 1000 -d testdb -e "SELECT * FROM users"
 ```
 
 Output may look like this:
