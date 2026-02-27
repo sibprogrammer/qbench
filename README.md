@@ -37,3 +37,11 @@ Average latency:   1.53 ms
 P95 latency:       1.93 ms
 P99 latency:       2.33 ms
 ```
+
+# Installation
+
+If you have Go toolchain installed, you can use the following command to install the utility:
+
+```
+go install github.com/sibprogrammer/qbench@latest
+```
