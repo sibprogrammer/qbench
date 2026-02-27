@@ -19,11 +19,15 @@ Query: SELECT * FROM users
 Running 1000 queries with concurrency 1...
 
 ---- Benchmark Results ----
-Total time:        1.21 sec
+Total time:        1.55 sec
 Complete requests: 1000
 Failed requests:   0
-Requests/sec:      826.23
-Average latency:   1.19 ms
-P95 latency:       1.66 ms
-P99 latency:       3.44 ms
+Requests/sec:      644.60
+Fetched rows:      301000
+Rows/query:        301
+Fetched data:      18435000 bytes
+Bytes/query:       18435
+Average latency:   1.53 ms
+P95 latency:       1.93 ms
+P99 latency:       2.33 ms
 ```

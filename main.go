@@ -57,6 +57,8 @@ func main() {
 
 	var wg sync.WaitGroup
 	var errors int64
+	var fetchedRows int64
+	var fetchedBytes int64
 	latencies := make([]float64, 0, *totalRequests)
 	latencyChan := make(chan float64, *totalRequests)
 
@@ -78,7 +80,19 @@ func main() {
 			if err != nil {
 				atomic.AddInt64(&errors, 1)
 			} else {
+				cols, _ := rows.Columns()
 				for rows.Next() {
+					atomic.AddInt64(&fetchedRows, 1)
+					values := make([]sql.RawBytes, len(cols))
+					scanArgs := make([]interface{}, len(cols))
+					for i := range values {
+						scanArgs[i] = &values[i]
+					}
+					if err := rows.Scan(scanArgs...); err == nil {
+						for _, v := range values {
+							atomic.AddInt64(&fetchedBytes, int64(len(v)))
+						}
+					}
 				}
 				rows.Close()
 			}
@@ -99,16 +113,23 @@ func main() {
 
 	sort.Float64s(latencies)
 
+	completeRequests := *totalRequests - int(errors)
 	avg := average(latencies)
 	p95 := percentile(latencies, 95)
 	p99 := percentile(latencies, 99)
 	rps := float64(*totalRequests) / totalTime
+	rowsPerQuery := float64(fetchedRows) / float64(*totalRequests)
+	bytesPerQuery := float64(fetchedBytes) / float64(*totalRequests)
 
 	fmt.Println("\n---- Benchmark Results ----")
 	fmt.Printf("Total time:        %.2f sec\n", totalTime)
-	fmt.Printf("Complete requests: %d\n", *totalRequests-int(errors))
+	fmt.Printf("Complete requests: %d\n", completeRequests)
 	fmt.Printf("Failed requests:   %d\n", errors)
 	fmt.Printf("Requests/sec:      %.2f\n", rps)
+	fmt.Printf("Fetched rows:      %d\n", fetchedRows)
+	fmt.Printf("Rows/query:        %.0f\n", rowsPerQuery)
+	fmt.Printf("Fetched data:      %d bytes\n", fetchedBytes)
+	fmt.Printf("Bytes/query:       %.0f\n", bytesPerQuery)
 	fmt.Printf("Average latency:   %.2f ms\n", avg)
 	fmt.Printf("P95 latency:       %.2f ms\n", p95)
 	fmt.Printf("P99 latency:       %.2f ms\n", p99)
