@@ -1,4 +1,4 @@
-module qbench
+module github.com/sibprogrammer/qbench
 
 go 1.25.2
 
