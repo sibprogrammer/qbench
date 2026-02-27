@@ -5,12 +5,14 @@ import (
 	"fmt"
 	"log"
 	"math"
+	"os"
 	"sort"
 	"sync"
 	"sync/atomic"
 	"time"
 
 	_ "github.com/go-sql-driver/mysql"
+	_ "github.com/mattn/go-sqlite3"
 	"github.com/spf13/pflag"
 )
 
@@ -19,7 +21,7 @@ func main() {
 	port := pflag.IntP("port", "P", 3306, "MySQL port")
 	user := pflag.StringP("user", "u", "root", "MySQL user")
 	pass := pflag.StringP("password", "p", "", "MySQL password")
-	dbname := pflag.StringP("database", "d", "", "Database name")
+	dbname := pflag.StringP("database", "d", "", "Database name (or file path for SQLite)")
 	query := pflag.StringP("execute", "e", "SELECT 1", "SQL query")
 	totalRequests := pflag.IntP("requests", "n", 1000, "Total number of requests")
 	concurrency := pflag.IntP("concurrency", "c", 1, "Concurrency level")
@@ -33,10 +35,20 @@ func main() {
 		log.Fatal("Total requests must be greater than 0")
 	}
 
-	dsn := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s",
-		*user, *pass, *host, *port, *dbname)
+	driver := "mysql"
+	if _, err := os.Stat(*dbname); err == nil {
+		driver = "sqlite3"
+	}
 
-	db, err := sql.Open("mysql", dsn)
+	var dsn string
+	switch driver {
+	case "mysql":
+		dsn = fmt.Sprintf("%s:%s@tcp(%s:%d)/%s", *user, *pass, *host, *port, *dbname)
+	case "sqlite3":
+		dsn = *dbname
+	}
+
+	db, err := sql.Open(driver, dsn)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -50,7 +62,12 @@ func main() {
 		log.Fatal(err)
 	}
 
-	fmt.Printf("Connection: %s@%s:%d/%s\n", *user, *host, *port, *dbname)
+	switch driver {
+	case "mysql":
+		fmt.Printf("Connection: %s@%s:%d/%s\n", *user, *host, *port, *dbname)
+	case "sqlite3":
+		fmt.Printf("Connection: sqlite3://%s\n", *dbname)
+	}
 	fmt.Printf("Query: %s\n", *query)
 	fmt.Println()
 	fmt.Printf("Running %d queries with concurrency %d...\n", *totalRequests, *concurrency)

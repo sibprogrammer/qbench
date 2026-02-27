@@ -2,6 +2,12 @@
 
 A small portable utility to benchmark the performance of SQL queries. Like `ab` (ApacheBench) for SQL world.
 
+# Supported Databases
+
+Currently supported databases are:
+- MySQL/MariaDB
+- SQLite
+
 # Usage
 
 Perform 1000 iterations of the query and print the results:
