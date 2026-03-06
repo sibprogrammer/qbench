@@ -45,6 +45,16 @@ P99 latency:       2.33 ms
 
 # Installation
 
+System-wide installation using installer script:
+```
+curl -sSL https://bit.ly/install-qbench | sudo bash
+```
+
+Install to INSTALL_DIR directory, without sudo:
+```
+curl -sSL https://bit.ly/install-qbench | INSTALL_DIR=$(pwd) bash
+```
+
 If you have Go toolchain installed, you can use the following command to install the utility:
 
 ```
