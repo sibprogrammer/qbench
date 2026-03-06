@@ -25,6 +25,7 @@ func main() {
 	query := pflag.StringP("execute", "e", "SELECT 1", "SQL query")
 	totalRequests := pflag.IntP("requests", "n", 1000, "Total number of requests")
 	concurrency := pflag.IntP("concurrency", "c", 1, "Concurrency level")
+	warmup := pflag.IntP("warmup", "w", 0, "Number of warmup queries before benchmarking")
 	pflag.Parse()
 
 	if *dbname == "" {
@@ -70,6 +71,9 @@ func main() {
 	}
 	fmt.Printf("Query: %s\n", *query)
 	fmt.Println()
+
+	runWarmup(db, *query, *warmup, *concurrency)
+
 	fmt.Printf("Running %d queries with concurrency %d...\n", *totalRequests, *concurrency)
 
 	var wg sync.WaitGroup
@@ -150,6 +154,36 @@ func main() {
 	fmt.Printf("Average latency:   %.2f ms\n", avg)
 	fmt.Printf("P95 latency:       %.2f ms\n", p95)
 	fmt.Printf("P99 latency:       %.2f ms\n", p99)
+}
+
+func runWarmup(db *sql.DB, query string, count int, concurrency int) {
+	if count <= 0 {
+		return
+	}
+
+	fmt.Printf("Warming up with %d queries and concurrency %d...\n", count, concurrency)
+
+	var wg sync.WaitGroup
+	sem := make(chan struct{}, concurrency)
+
+	for i := 0; i < count; i++ {
+		wg.Add(1)
+		sem <- struct{}{}
+		go func() {
+			defer wg.Done()
+			defer func() { <-sem }()
+			rows, err := db.Query(query)
+			if err == nil {
+				for rows.Next() {
+				}
+				rows.Close()
+			}
+		}()
+	}
+
+	wg.Wait()
+	fmt.Println("Warmup complete.")
+	fmt.Println()
 }
 
 func average(nums []float64) float64 {
