@@ -233,7 +233,7 @@ func runBenchmark(db *sql.DB, options execOptions) benchmarkResults {
 
 func printResults(results benchmarkResults) {
 	fmt.Println("\n---- Benchmark Results ----")
-	fmt.Printf("Total time:        %.2f sec\n", results.totalTime)
+	fmt.Printf("Total time:        %.3f sec\n", results.totalTime)
 	fmt.Printf("Complete requests: %d\n", results.completeReqs)
 	fmt.Printf("Failed requests:   %d\n", results.failedReqs)
 	fmt.Printf("Requests/sec:      %.2f\n", results.rps)
