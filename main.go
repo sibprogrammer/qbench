@@ -47,7 +47,7 @@ func parseFlags() execOptions {
 	host := pflag.StringP("host", "h", "127.0.0.1", "MySQL host")
 	port := pflag.IntP("port", "P", 3306, "MySQL port")
 	user := pflag.StringP("user", "u", "root", "MySQL user")
-	pass := pflag.StringP("password", "p", "", "MySQL password")
+	password := pflag.StringP("password", "p", "", "MySQL password")
 	dbname := pflag.StringP("database", "d", "", "Database name (or file path for SQLite)")
 	query := pflag.StringP("execute", "e", "SELECT 1", "SQL query")
 	totalRequests := pflag.IntP("requests", "n", 1000, "Total number of requests")
@@ -79,7 +79,7 @@ func parseFlags() execOptions {
 	var dsn string
 	switch driver {
 	case "mysql":
-		dsn = fmt.Sprintf("%s:%s@tcp(%s:%d)/%s", *user, *pass, *host, *port, *dbname)
+		dsn = fmt.Sprintf("%s:%s@tcp(%s:%d)/%s", *user, *password, *host, *port, *dbname)
 	case "sqlite3":
 		dsn = *dbname
 	}
