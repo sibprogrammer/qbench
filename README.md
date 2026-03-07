@@ -1,6 +1,7 @@
 # qbench
 
 [![build](https://github.com/sibprogrammer/qbench/workflows/build/badge.svg)](https://github.com/sibprogrammer/qbench/actions)
+[![Codecov](https://codecov.io/gh/sibprogrammer/qbench/branch/master/graph/badge.svg?token=ZFMT4JSKC3)](https://codecov.io/gh/sibprogrammer/qbench)
 
 A small portable utility to benchmark the performance of SQL queries. Like `ab` (ApacheBench) for SQL world.
 
