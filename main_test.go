@@ -342,7 +342,7 @@ func TestPrintResults(t *testing.T) {
 
 	checks := []string{
 		"Benchmark Results",
-		"Total time:        1.23 sec",
+		"Total time:        1.230 sec",
 		"Complete requests: 100",
 		"Failed requests:   0",
 		"Requests/sec:      81.30",
