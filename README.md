@@ -1,6 +1,7 @@
 # qbench
 
 [![build](https://github.com/sibprogrammer/qbench/workflows/build/badge.svg)](https://github.com/sibprogrammer/qbench/actions)
+[![Go Report Card](https://goreportcard.com/badge/github.com/sibprogrammer/qbench)](https://goreportcard.com/report/github.com/sibprogrammer/qbench)
 [![Codecov](https://codecov.io/gh/sibprogrammer/qbench/branch/master/graph/badge.svg?token=ZFMT4JSKC3)](https://codecov.io/gh/sibprogrammer/qbench)
 [![Scc Count](https://sloc.xyz/github/sibprogrammer/qbench/)](https://github.com/sibprogrammer/qbench/)
 
