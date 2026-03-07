@@ -2,11 +2,13 @@ package main
 
 import (
 	"database/sql"
+	_ "embed"
 	"fmt"
 	"log"
 	"math"
 	"os"
 	"sort"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -15,6 +17,14 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/spf13/pflag"
 )
+
+var (
+	commit = "000000"
+	date   = ""
+)
+
+//go:embed version
+var version string
 
 type execOptions struct {
 	driver        string
@@ -44,6 +54,7 @@ type benchmarkResults struct {
 }
 
 func parseFlags() execOptions {
+	showVersion := pflag.BoolP("version", "v", false, "Print version and exit")
 	host := pflag.StringP("host", "h", "127.0.0.1", "MySQL host")
 	port := pflag.IntP("port", "P", 3306, "MySQL port")
 	user := pflag.StringP("user", "u", "root", "MySQL user")
@@ -54,6 +65,16 @@ func parseFlags() execOptions {
 	concurrency := pflag.IntP("concurrency", "c", 1, "Concurrency level")
 	warmup := pflag.IntP("warmup", "w", 0, "Number of warmup queries before benchmarking")
 	pflag.Parse()
+
+	if *showVersion {
+		fullVersion := strings.TrimSpace(version)
+		if date != "" {
+			fullVersion += fmt.Sprintf(" (%s, %s)", date, commit)
+		}
+		fmt.Printf("qbench %s", fullVersion)
+		fmt.Println()
+		os.Exit(0)
+	}
 
 	if *dbname == "" {
 		log.Fatal("Database name required (-d)")
