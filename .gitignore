@@ -1,2 +1,4 @@
+/.env
 /qbench
 /dist/
+/coverage.txt

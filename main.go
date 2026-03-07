@@ -16,7 +16,34 @@ import (
 	"github.com/spf13/pflag"
 )
 
-func main() {
+type execOptions struct {
+	driver        string
+	dsn           string
+	host          string
+	port          int
+	user          string
+	dbname        string
+	query         string
+	totalRequests int
+	concurrency   int
+	warmup        int
+}
+
+type benchmarkResults struct {
+	totalTime     float64
+	completeReqs  int
+	failedReqs    int64
+	rps           float64
+	fetchedRows   int64
+	rowsPerQuery  float64
+	fetchedBytes  int64
+	bytesPerQuery float64
+	avgLatency    float64
+	p95Latency    float64
+	p99Latency    float64
+}
+
+func parseFlags() execOptions {
 	host := pflag.StringP("host", "h", "127.0.0.1", "MySQL host")
 	port := pflag.IntP("port", "P", 3306, "MySQL port")
 	user := pflag.StringP("user", "u", "root", "MySQL user")
@@ -36,6 +63,14 @@ func main() {
 		log.Fatal("Total requests must be greater than 0")
 	}
 
+	if *warmup < 0 {
+		log.Fatal("Warmup queries cannot be negative")
+	}
+
+	if *concurrency <= 0 {
+		log.Fatal("Concurrency must be greater than 0")
+	}
+
 	driver := "mysql"
 	if _, err := os.Stat(*dbname); err == nil {
 		driver = "sqlite3"
@@ -49,111 +84,46 @@ func main() {
 		dsn = *dbname
 	}
 
-	db, err := sql.Open(driver, dsn)
+	return execOptions{
+		driver:        driver,
+		dsn:           dsn,
+		host:          *host,
+		port:          *port,
+		user:          *user,
+		dbname:        *dbname,
+		query:         *query,
+		totalRequests: *totalRequests,
+		concurrency:   *concurrency,
+		warmup:        *warmup,
+	}
+}
+
+func openDB(options execOptions) *sql.DB {
+	db, err := sql.Open(options.driver, options.dsn)
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer db.Close()
 
-	db.SetMaxOpenConns(*concurrency)
-	db.SetMaxIdleConns(*concurrency)
+	db.SetMaxOpenConns(options.concurrency)
+	db.SetMaxIdleConns(options.concurrency)
 	db.SetConnMaxLifetime(time.Minute)
 
 	if err := db.Ping(); err != nil {
 		log.Fatal(err)
 	}
 
-	switch driver {
+	return db
+}
+
+func printConnectionInfo(options execOptions) {
+	switch options.driver {
 	case "mysql":
-		fmt.Printf("Connection: %s@%s:%d/%s\n", *user, *host, *port, *dbname)
+		fmt.Printf("Connection: %s@%s:%d/%s\n", options.user, options.host, options.port, options.dbname)
 	case "sqlite3":
-		fmt.Printf("Connection: sqlite3://%s\n", *dbname)
+		fmt.Printf("Connection: sqlite3://%s\n", options.dbname)
 	}
-	fmt.Printf("Query: %s\n", *query)
+	fmt.Printf("Query: %s\n", options.query)
 	fmt.Println()
-
-	runWarmup(db, *query, *warmup, *concurrency)
-
-	fmt.Printf("Running %d queries with concurrency %d...\n", *totalRequests, *concurrency)
-
-	var wg sync.WaitGroup
-	var errors int64
-	var fetchedRows int64
-	var fetchedBytes int64
-	latencies := make([]float64, 0, *totalRequests)
-	latencyChan := make(chan float64, *totalRequests)
-
-	startTime := time.Now()
-
-	sem := make(chan struct{}, *concurrency)
-
-	for i := 0; i < *totalRequests; i++ {
-		wg.Add(1)
-		sem <- struct{}{}
-
-		go func() {
-			defer wg.Done()
-			defer func() { <-sem }()
-
-			start := time.Now()
-
-			rows, err := db.Query(*query)
-			if err != nil {
-				atomic.AddInt64(&errors, 1)
-			} else {
-				cols, _ := rows.Columns()
-				for rows.Next() {
-					atomic.AddInt64(&fetchedRows, 1)
-					values := make([]sql.RawBytes, len(cols))
-					scanArgs := make([]interface{}, len(cols))
-					for i := range values {
-						scanArgs[i] = &values[i]
-					}
-					if err := rows.Scan(scanArgs...); err == nil {
-						for _, v := range values {
-							atomic.AddInt64(&fetchedBytes, int64(len(v)))
-						}
-					}
-				}
-				rows.Close()
-			}
-
-			elapsed := time.Since(start).Seconds() * 1000
-			latencyChan <- elapsed
-		}()
-	}
-
-	wg.Wait()
-	close(latencyChan)
-
-	totalTime := time.Since(startTime).Seconds()
-
-	for l := range latencyChan {
-		latencies = append(latencies, l)
-	}
-
-	sort.Float64s(latencies)
-
-	completeRequests := *totalRequests - int(errors)
-	avg := average(latencies)
-	p95 := percentile(latencies, 95)
-	p99 := percentile(latencies, 99)
-	rps := float64(*totalRequests) / totalTime
-	rowsPerQuery := float64(fetchedRows) / float64(*totalRequests)
-	bytesPerQuery := float64(fetchedBytes) / float64(*totalRequests)
-
-	fmt.Println("\n---- Benchmark Results ----")
-	fmt.Printf("Total time:        %.2f sec\n", totalTime)
-	fmt.Printf("Complete requests: %d\n", completeRequests)
-	fmt.Printf("Failed requests:   %d\n", errors)
-	fmt.Printf("Requests/sec:      %.2f\n", rps)
-	fmt.Printf("Fetched rows:      %d\n", fetchedRows)
-	fmt.Printf("Rows/query:        %.0f\n", rowsPerQuery)
-	fmt.Printf("Fetched data:      %d bytes\n", fetchedBytes)
-	fmt.Printf("Bytes/query:       %.0f\n", bytesPerQuery)
-	fmt.Printf("Average latency:   %.2f ms\n", avg)
-	fmt.Printf("P95 latency:       %.2f ms\n", p95)
-	fmt.Printf("P99 latency:       %.2f ms\n", p99)
 }
 
 func runWarmup(db *sql.DB, query string, count int, concurrency int) {
@@ -186,6 +156,96 @@ func runWarmup(db *sql.DB, query string, count int, concurrency int) {
 	fmt.Println()
 }
 
+func runBenchmark(db *sql.DB, options execOptions) benchmarkResults {
+	fmt.Printf("Running %d queries with concurrency %d...\n", options.totalRequests, options.concurrency)
+
+	var wg sync.WaitGroup
+	var errors int64
+	var fetchedRows int64
+	var fetchedBytes int64
+	latencyChan := make(chan float64, options.totalRequests)
+
+	startTime := time.Now()
+
+	sem := make(chan struct{}, options.concurrency)
+
+	for i := 0; i < options.totalRequests; i++ {
+		wg.Add(1)
+		sem <- struct{}{}
+
+		go func() {
+			defer wg.Done()
+			defer func() { <-sem }()
+
+			start := time.Now()
+
+			rows, err := db.Query(options.query)
+			if err != nil {
+				atomic.AddInt64(&errors, 1)
+			} else {
+				cols, _ := rows.Columns()
+				for rows.Next() {
+					atomic.AddInt64(&fetchedRows, 1)
+					values := make([]sql.RawBytes, len(cols))
+					scanArgs := make([]interface{}, len(cols))
+					for i := range values {
+						scanArgs[i] = &values[i]
+					}
+					if err := rows.Scan(scanArgs...); err == nil {
+						for _, v := range values {
+							atomic.AddInt64(&fetchedBytes, int64(len(v)))
+						}
+					}
+				}
+				rows.Close()
+			}
+
+			elapsed := time.Since(start).Seconds() * 1000
+			latencyChan <- elapsed
+		}()
+	}
+
+	wg.Wait()
+	close(latencyChan)
+
+	totalTime := time.Since(startTime).Seconds()
+
+	latencies := make([]float64, 0, options.totalRequests)
+	for l := range latencyChan {
+		latencies = append(latencies, l)
+	}
+	sort.Float64s(latencies)
+
+	return benchmarkResults{
+		totalTime:     totalTime,
+		completeReqs:  options.totalRequests - int(errors),
+		failedReqs:    errors,
+		rps:           float64(options.totalRequests) / totalTime,
+		fetchedRows:   fetchedRows,
+		rowsPerQuery:  float64(fetchedRows) / float64(options.totalRequests),
+		fetchedBytes:  fetchedBytes,
+		bytesPerQuery: float64(fetchedBytes) / float64(options.totalRequests),
+		avgLatency:    average(latencies),
+		p95Latency:    percentile(latencies, 95),
+		p99Latency:    percentile(latencies, 99),
+	}
+}
+
+func printResults(results benchmarkResults) {
+	fmt.Println("\n---- Benchmark Results ----")
+	fmt.Printf("Total time:        %.2f sec\n", results.totalTime)
+	fmt.Printf("Complete requests: %d\n", results.completeReqs)
+	fmt.Printf("Failed requests:   %d\n", results.failedReqs)
+	fmt.Printf("Requests/sec:      %.2f\n", results.rps)
+	fmt.Printf("Fetched rows:      %d\n", results.fetchedRows)
+	fmt.Printf("Rows/query:        %.0f\n", results.rowsPerQuery)
+	fmt.Printf("Fetched data:      %d bytes\n", results.fetchedBytes)
+	fmt.Printf("Bytes/query:       %.0f\n", results.bytesPerQuery)
+	fmt.Printf("Average latency:   %.2f ms\n", results.avgLatency)
+	fmt.Printf("P95 latency:       %.2f ms\n", results.p95Latency)
+	fmt.Printf("P99 latency:       %.2f ms\n", results.p99Latency)
+}
+
 func average(nums []float64) float64 {
 	sum := 0.0
 	for _, n := range nums {
@@ -203,4 +263,15 @@ func percentile(sorted []float64, p int) float64 {
 		index = len(sorted) - 1
 	}
 	return sorted[index]
+}
+
+func main() {
+	options := parseFlags()
+	db := openDB(options)
+	defer db.Close()
+
+	printConnectionInfo(options)
+	runWarmup(db, options.query, options.warmup, options.concurrency)
+	results := runBenchmark(db, options)
+	printResults(results)
 }
