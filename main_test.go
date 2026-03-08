@@ -71,6 +71,47 @@ func makeRange(min, max int) []float64 {
 	return r
 }
 
+func TestShortCommit(t *testing.T) {
+	tests := []struct {
+		name string
+		hash string
+		want string
+	}{
+		{"full 40-char hash", "abc1234567890def1234567890abcdef12345678", "abc1234"},
+		{"empty string", "", ""},
+		{"default commit", "0000000", "0000000"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := shortCommit(tt.hash)
+			if got != tt.want {
+				t.Errorf("shortCommit(%q) = %q, want %q", tt.hash, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestShortDate(t *testing.T) {
+	tests := []struct {
+		name string
+		date string
+		want string
+	}{
+		{"RFC3339 full", "2026-03-08T22:08:22Z", "2026-03-08"},
+		{"empty", "", ""},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := shortDate(tt.date)
+			if got != tt.want {
+				t.Errorf("shortDate(%q) = %q, want %q", tt.date, got, tt.want)
+			}
+		})
+	}
+}
+
 func setupTestDB(t *testing.T) (*sql.DB, string) {
 	t.Helper()
 	tmpFile, err := os.CreateTemp("", "qbench-test-*.db")

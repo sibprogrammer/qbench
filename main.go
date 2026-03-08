@@ -19,7 +19,7 @@ import (
 )
 
 var (
-	commit = "000000"
+	commit = "0000000"
 	date   = ""
 )
 
@@ -67,12 +67,7 @@ func parseFlags() execOptions {
 	pflag.Parse()
 
 	if *showVersion {
-		fullVersion := strings.TrimSpace(version)
-		if date != "" {
-			fullVersion += fmt.Sprintf(" (%s, %s)", date, commit)
-		}
-		fmt.Printf("qbench %s", fullVersion)
-		fmt.Println()
+		printVersion()
 		os.Exit(0)
 	}
 
@@ -117,6 +112,29 @@ func parseFlags() execOptions {
 		concurrency:   *concurrency,
 		warmup:        *warmup,
 	}
+}
+
+func shortCommit(hash string) string {
+	if len(hash) > 7 {
+		return hash[:7]
+	}
+	return hash
+}
+
+func shortDate(d string) string {
+	if t, err := time.Parse(time.RFC3339, d); err == nil {
+		return t.Format("2006-01-02")
+	}
+	return d
+}
+
+func printVersion() {
+	fullVersion := strings.TrimSpace(version)
+	if date != "" {
+		fullVersion += fmt.Sprintf(" (%s, %s)", shortDate(date), shortCommit(commit))
+	}
+	fmt.Printf("qbench %s", fullVersion)
+	fmt.Println()
 }
 
 func openDB(options execOptions) *sql.DB {
