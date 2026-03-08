@@ -63,7 +63,7 @@ func parseFlags() execOptions {
 	query := pflag.StringP("execute", "e", "SELECT 1", "SQL query")
 	totalRequests := pflag.IntP("requests", "n", 1000, "Total number of requests")
 	concurrency := pflag.IntP("concurrency", "c", 1, "Concurrency level")
-	warmup := pflag.IntP("warmup", "w", 0, "Number of warmup queries before benchmarking")
+	warmup := pflag.IntP("warmup", "w", 0, "Number of warmup queries before benchmarking (default 0)")
 	pflag.Parse()
 
 	if *showVersion {
