@@ -18,13 +18,13 @@ Currently supported databases are:
 Perform 1000 iterations of the query and print the results:
 
 ```
-qbench -c 1000 -d testdb -e "SELECT * FROM users"
+qbench -n 1000 -d testdb -e "SELECT * FROM users"
 ```
 
 Output may look like this:
 
 ```
-Connection: admin@127.0.0.1:3306/testdb
+Connection: root@127.0.0.1:3306/testdb
 Query: SELECT * FROM users
 
 Running 1000 queries with concurrency 1...
@@ -45,12 +45,12 @@ P99 latency:       2.33 ms
 
 # Installation
 
-System-wide installation using installer script:
+System-wide installation using the installer script:
 ```
 curl -sSL https://bit.ly/install-qbench | sudo bash
 ```
 
-Install to INSTALL_DIR directory, without sudo:
+Install to the INSTALL_DIR directory, without sudo:
 ```
 curl -sSL https://bit.ly/install-qbench | INSTALL_DIR=$(pwd) bash
 ```
