@@ -44,12 +44,20 @@ P99 latency:       2.33 ms
 
 # Installation
 
+Installation using Homebrew:
+
+```
+brew install sibprogrammer/qbench/qbench
+```
+
 System-wide installation using the installer script:
+
 ```
 curl -sSL https://bit.ly/install-qbench | sudo bash
 ```
 
 Install to the INSTALL_DIR directory, without sudo:
+
 ```
 curl -sSL https://bit.ly/install-qbench | INSTALL_DIR=$(pwd) bash
 ```
