@@ -71,6 +71,12 @@ func parseFlags() execOptions {
 		os.Exit(0)
 	}
 
+	if *password == "" {
+		if envPassword := os.Getenv("MYSQL_PASSWORD"); envPassword != "" {
+			*password = envPassword
+		}
+	}
+
 	if *dbname == "" {
 		log.Fatal("Database name required (-d)")
 	}
